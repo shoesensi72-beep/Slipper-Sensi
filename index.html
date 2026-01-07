@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLIPPER-SENSI | OFFICIAL</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root { --primary: #ff0000; --bg: #030303; --card: #0a0a0a; }
+        body { font-family: 'Orbitron', sans-serif; background: var(--bg); color: white; margin: 0; display: flex; justify-content: center; min-height: 100vh; padding: 20px; }
+        .app-container { width: 100%; max-width: 450px; background: var(--card); padding: 30px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 0 50px rgba(0,0,0,1); }
+        h1 { font-size: 1.4rem; text-align: center; color: var(--primary); text-shadow: 0 0 10px var(--primary); letter-spacing: 3px; margin-bottom: 5px; }
+        .color-picker-wrapper { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; background: #111; padding: 10px; border-radius: 8px; border: 1px solid #222; }
+        #themeColor { border: none; width: 40px; height: 25px; background: none; cursor: pointer; }
+        select, .gen-btn { width: 100%; padding: 15px; background: #000; border: 1px solid #1a1a1a; border-radius: 5px; color: #fff; margin-bottom: 12px; font-family: 'Orbitron'; font-size: 11px; outline: none; box-sizing: border-box; }
+        .mode-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .mode-btn { padding: 10px; background: #000; border: 1px solid #1a1a1a; color: #444; font-size: 9px; cursor: pointer; font-family: 'Orbitron'; }
+        .mode-btn.active { border-color: var(--primary); color: #fff; box-shadow: 0 0 10px var(--primary); }
+        .gen-btn { background: var(--primary); border: none; font-weight: bold; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); cursor: pointer; }
+        #loader-screen { display: none; margin: 40px 0; text-align: center; }
+        .scanner-box { position: relative; width: 220px; height: 220px; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+        svg { position: absolute; width: 220px; height: 220px; transform: rotate(-90deg); }
+        .ring-fill { fill: none; stroke: var(--primary); stroke-width: 8; stroke-dasharray: 565; stroke-dashoffset: 565; transition: 0.1s; }
+        .weapon-name { position: absolute; top: 80px; width: 100%; text-align: center; color: var(--primary); font-size: 16px; font-weight: 900; }
+        .percentage { position: absolute; top: 110px; width: 100%; text-align: center; font-size: 28px; font-weight: 900; }
+        #results { display: none; margin-top: 20px; background: #000; padding: 20px; border-radius: 10px; border: 1px solid #1a1a1a; }
+        .res-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #111; font-size: 11px; }
+        .res-item .val { color: var(--primary); font-weight: bold; font-size: 14px; }
+        .cat-label { font-size: 9px; color: #555; margin: 15px 0 5px 0; border-left: 2px solid var(--primary); padding-left: 8px; text-transform: uppercase; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="app-container">
+    <h1 id="app-title">SLIPPER-SENSI</h1>
+    <div id="main-ui">
+        <div class="color-picker-wrapper">
+            <label style="font-size: 10px;">COR DO TEMA:</label>
+            <input type="color" id="themeColor" value="#ff0000" onchange="updateColor(this.value)">
+        </div>
+        <select id="brand" onchange="updateModels()">
+            <option value="" disabled selected>MARCA</option>
+            <option value="Apple">APPLE</option>
+            <option value="Samsung">SAMSUNG</option>
+            <option value="Xiaomi">XIAOMI</option>
+            <option value="Motorola">MOTOROLA</option>
+            <option value="Huawei">HUAWEI</option>
+            <option value="Realme">REALME</option>
+            <option value="Google">GOOGLE PIXEL</option>
+            <option value="ASUS">ASUS (ROG)</option>
+            <option value="Infinix">INFINIX</option>
+            <option value="Oppo">OPPO</option>
+            <option value="Vivo">VIVO</option>
+            <option value="Sony">SONY</option>
+        </select>
+        <select id="model"><option disabled selected>MODELO</option></select>
+        <div class="mode-grid">
+            <button class="mode-btn" onclick="setMode(this, 'Baixa')">BAIXA</button>
+            <button class="mode-btn active" onclick="setMode(this, 'Média')">MÉDIA</button>
+            <button class="mode-btn" onclick="setMode(this, 'Alta')">ALTA</button>
+        </div>
+        <button class="gen-btn" onclick="startScanner()">GERAR CONFIGURAÇÃO</button>
+    </div>
+
+    <div id="loader-screen">
+        <div class="scanner-box">
+            <svg viewBox="0 0 200 200">
+                <circle cx="100" cy="100" r="90" style="fill:none; stroke:#111; stroke-width:6;"></circle>
+                <circle class="ring-fill" id="svgCircle" cx="100" cy="100" r="90"></circle>
+            </svg>
+            <div id="weaponName" class="weapon-name">ANALISANDO</div>
+            <div id="percentNum" class="percentage">0%</div>
+        </div>
+    </div>
+
+    <div id="results">
+        <div id="export-area" style="background: #000; padding: 15px;">
+            <h2 id="res-title" style="font-size: 10px; text-align: center; color: var(--primary); border-bottom: 1px solid #222; padding-bottom: 10px;"></h2>
+            <div class="cat-label">🎮 SENSIBILIDADE JOGO</div>
+            <div id="game-stats"></div>
+            <div class="cat-label">📱 CONFIGURAÇÕES CELULAR</div>
+            <div id="sys-stats"></div>
+        </div>
+        <button class="gen-btn" style="background: #1a1a1a; margin-top:15px; border: 1px solid var(--primary);" onclick="downloadPDF()">EXPORTAR PDF</button>
+        <button class="gen-btn" style="background: #222;" onclick="location.reload()">VOLTAR</button>
+    </div>
+</div>
+
+<script>
+    let currentMode = "Média";
+    const weapons = ["MP40", "M1014", "UMP", "DESERT", "M1887", "SCAR", "GROZA", "M4A1", "MAC-10"];
+    const modelDB = {
+        "Apple": ["iPhone 17 Pro Max", "17 Pro", "16 Pro Max", "15 Pro Max", "14 Pro Max", "13 Pro Max", "12 Pro Max", "11 Pro Max", "XS Max", "XR", "X", "8 Plus", "7 Plus", "SE (3ª Gen)", "5s"],
+        "Samsung": ["Galaxy S26 Ultra", "S25 Ultra", "S24 Ultra", "S23 Ultra", "A55", "A54", "M54", "Note 20 Ultra", "J7 Prime", "A10s"],
+        "Xiaomi": ["Xiaomi 14 Ultra", "Redmi Note 13 Pro+", "Note 12 Pro", "Poco X6 Pro", "Poco X3 Pro", "Redmi 13C", "Redmi 8"],
+        "Motorola": ["Edge 50 Ultra", "Edge 40", "G85", "G84", "G54", "G60", "G100", "Razr 50 Ultra"],
+        "Huawei": ["Pura 70 Ultra", "Mate 60 Pro", "P60 Pro"],
+        "Realme": ["GT 5 Pro", "Realme 12 Pro+", "C67", "C55"],
+        "Google": ["Pixel 9 Pro XL", "Pixel 8 Pro", "Pixel 7 Pro"],
+        "ASUS": ["ROG Phone 8 Pro", "ROG Phone 7", "Zenfone 11 Ultra"],
+        "Infinix": ["Note 40 Pro", "Zero Ultra", "GT 20 Pro"],
+        "Oppo": ["Find X7 Ultra", "Reno 12 Pro"],
+        "Vivo": ["X100 Ultra", "V30 Pro"],
+        "Sony": ["Xperia 1 VI", "Xperia 5 V"]
+    };
+
+    function updateColor(color) { document.documentElement.style.setProperty('--primary', color); }
+    function setMode(btn, m) { document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentMode = m; }
+    function updateModels() {
+        const b = document.getElementById('brand').value;
+        const m = document.getElementById('model');
+        m.innerHTML = '<option disabled selected>MODELO</option>';
+        modelDB[b].forEach(mod => m.innerHTML += `<option value="${mod}">${mod}</option>`);
+    }
+
+    function startScanner() {
+        if(!document.getElementById('model').value) return alert("Escolha o modelo!");
+        document.getElementById('main-ui').style.display = 'none';
+        document.getElementById('loader-screen').style.display = 'block';
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress++;
+            document.getElementById('percentNum').innerText = progress + "%";
+            document.getElementById('svgCircle').style.strokeDashoffset = 565 - (progress / 100) * 565;
+            if(progress % 12 === 0) document.getElementById('weaponName').innerText = weapons[Math.floor(Math.random() * weapons.length)];
+            if(progress >= 100) { clearInterval(interval); showResults(); }
+        }, 30);
+    }
+
+    function showResults() {
+        document.getElementById('loader-screen').style.display = 'none';
+        document.getElementById('results').style.display = 'block';
+        const model = document.getElementById('model').value;
+        const brand = document.getElementById('brand').value;
+        const variantID = Math.floor(Math.random() * 200) + 1;
+        document.getElementById('res-title').innerText = `${model.toUpperCase()} | PACK #${variantID}`;
+
+        let base = currentMode === 'Baixa' ? 112 : (currentMode === 'Média' ? 155 : 192);
+        let g = Math.min(200, base + (variantID % 8));
+        
+        document.getElementById('game-stats').innerHTML = `
+            <div class="res-item"><span>GERAL</span><span class="val">${g}</span></div>
+            <div class="res-item"><span>RED DOT</span><span class="val">${Math.min(200, g+7)}</span></div>
+            <div class="res-item"><span>MIRA 2X</span><span class="val">${Math.min(200, g+13)}</span></div>
+            <div class="res-item"><span>MIRA 4X</span><span class="val">200</span></div>
+            <div class="res-item"><span>BOTÃO DE ATIRAR</span><span class="val">${42 + (variantID % 15)}%</span></div>
+        `;
+
+        const cursors = ["INDIVIDUAL", "PRECISO", "REFINADO"];
+        const selectedCursor = cursors[variantID % 3];
+
+        // SEPARAÇÃO TÉCNICA: CICLOS PARA APPLE, DPI PARA ANDROID
+        let specificSetting = (brand === "Apple") 
+            ? `<div class="res-item"><span>CICLOS</span><span class="val">${(variantID % 10) + 1}</span></div>` 
+            : `<div class="res-item"><span>DPI</span><span class="val">${variantID < 100 ? 591 : 441 + (variantID % 200)}</span></div>`;
+
+        document.getElementById('sys-stats').innerHTML = `
+            <div class="res-item"><span>CURSOR MÓVEL</span><span class="val">${selectedCursor}</span></div>
+            <div class="res-item"><span>VELOC. DO CURSOR</span><span class="val">120</span></div>
+            <div class="res-item"><span>TOLERÂNCIA MOV.</span><span class="val">MÍNIMA</span></div>
+            <div class="res-item"><span>RASTREIO</span><span class="val">100%</span></div>
+            ${specificSetting}
+        `;
+    }
+
+    function downloadPDF() {
+        const element = document.getElementById('export-area');
+        html2pdf().set({ margin: 10, filename: 'SLIPPER-CONFIG.pdf', html2canvas: { scale: 3, backgroundColor: '#000000' } }).from(element).save();
+    }
+</script>
+</body>
+</html>
